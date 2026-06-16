@@ -11,9 +11,14 @@ impl SearchProvider for Google {
         "google"
     }
 
-    async fn search(&self, browser: &Browser, query: &str) -> anyhow::Result<String> {
+    async fn search(
+        &self,
+        browser: &Browser,
+        query: &str,
+        wait_seconds: u64,
+    ) -> anyhow::Result<String> {
         let url = url::Url::parse_with_params("https://www.google.com/search", &[("q", query)])
             .context("failed to build google URL")?;
-        navigate_and_get_markdown(browser, url.as_str()).await
+        navigate_and_get_markdown(browser, url.as_str(), wait_seconds).await
     }
 }

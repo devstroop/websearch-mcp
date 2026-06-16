@@ -57,3 +57,89 @@ impl SearchEngine {
         self.providers.keys().copied().collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_engine() -> SearchEngine {
+        SearchEngine::new()
+    }
+
+    #[test]
+    fn test_exact_match_brave() {
+        let engine = make_engine();
+        let prov = engine.resolve("brave").unwrap();
+        assert_eq!(prov.provider_kind(), "brave");
+    }
+
+    #[test]
+    fn test_exact_match_duckduckgo() {
+        let engine = make_engine();
+        let prov = engine.resolve("duckduckgo").unwrap();
+        assert_eq!(prov.provider_kind(), "duckduckgo");
+    }
+
+    #[test]
+    fn test_exact_match_google() {
+        let engine = make_engine();
+        let prov = engine.resolve("google").unwrap();
+        assert_eq!(prov.provider_kind(), "google");
+    }
+
+    #[test]
+    fn test_case_insensitive() {
+        let engine = make_engine();
+        assert_eq!(engine.resolve("Brave").unwrap().provider_kind(), "brave");
+        assert_eq!(engine.resolve("BRAVE").unwrap().provider_kind(), "brave");
+        assert_eq!(
+            engine.resolve("DuckDuckGo").unwrap().provider_kind(),
+            "duckduckgo"
+        );
+        assert_eq!(engine.resolve("GOOGLE").unwrap().provider_kind(), "google");
+    }
+
+    #[test]
+    fn test_prefix_match() {
+        let engine = make_engine();
+        assert_eq!(engine.resolve("b").unwrap().provider_kind(), "brave");
+        assert_eq!(engine.resolve("g").unwrap().provider_kind(), "google");
+        assert_eq!(
+            engine.resolve("duck").unwrap().provider_kind(),
+            "duckduckgo"
+        );
+    }
+
+    #[test]
+    fn test_trim_whitespace() {
+        let engine = make_engine();
+        assert_eq!(
+            engine.resolve("  brave  ").unwrap().provider_kind(),
+            "brave"
+        );
+    }
+
+    #[test]
+    fn test_unknown_provider() {
+        let engine = make_engine();
+        assert!(engine.resolve("yahoo").is_none());
+        assert!(engine.resolve("bing").is_none());
+    }
+
+    #[test]
+    fn test_available_providers() {
+        let engine = make_engine();
+        let mut providers = engine.available_providers();
+        providers.sort();
+        assert_eq!(providers, vec!["brave", "duckduckgo", "google"]);
+    }
+
+    #[test]
+    fn test_prefix_conflict_does_not_panic() {
+        let engine = make_engine();
+        // "br" matches "brave" prefix
+        assert_eq!(engine.resolve("br").unwrap().provider_kind(), "brave");
+        // "go" matches "google" prefix
+        assert_eq!(engine.resolve("go").unwrap().provider_kind(), "google");
+    }
+}
