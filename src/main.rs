@@ -116,7 +116,7 @@ struct WebSearchServer {
     browser_mgr: Arc<BrowserManager>,
 }
 
-#[tool_router(server_handler)]
+#[tool_router]
 impl WebSearchServer {
     /// Search the web using a pluggable search engine provider.
     /// Supports: brave (default, recommended), duckduckgo, and google.
@@ -191,6 +191,9 @@ impl WebSearchServer {
         }
     }
 }
+
+#[::rmcp::tool_handler(name = "websearch", router = Self::tool_router())]
+impl ::rmcp::ServerHandler for WebSearchServer {}
 
 // ---------------------------------------------------------------------------
 // Entrypoint
