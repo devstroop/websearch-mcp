@@ -33,10 +33,23 @@ pub async fn navigate_and_get_markdown(browser: &Browser, url: &str) -> anyhow::
         .await
         .context("failed to open new page")?;
 
+    // Hide automation fingerprints before navigation — this runs on the
+    // blank page, overriding navigator.webdriver before the target page loads.
+    let conceal = r#"
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        window.chrome = { runtime: {} };
+        Object.defineProperty(navigator, 'plugins', { get: () => [1,2,3,4,5] });
+        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    "#;
+    let _ = page.evaluate(conceal).await;
+
     tokio::time::timeout(get_page_wait(), page.goto(url))
         .await
         .context("navigation timed out")?
         .context("failed to navigate")?;
+
+    // Apply patches again after navigation (some sites check post-load).
+    let _ = page.evaluate(conceal).await;
 
     // Allow JS to render and network to settle.
     tokio::time::sleep(get_page_wait()).await;

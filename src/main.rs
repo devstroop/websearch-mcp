@@ -200,6 +200,17 @@ impl WebSearchServer {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
+        .with_ansi(false)
+        .with_target(false)
+        .with_file(false)
+        .with_line_number(false)
+        .without_time()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::builder()
+                .with_default_directive(tracing::Level::WARN.into())
+                .from_env_lossy()
+                .add_directive("websearch=info".parse().unwrap()),
+        )
         .init();
 
     let args = Args::parse();

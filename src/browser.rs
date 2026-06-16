@@ -114,10 +114,17 @@ impl BrowserManager {
             .viewport(viewport)
             .window_size(1080, 768)
             .arg("--no-first-run")
-            .arg("--disable-search-engine-choice-screen");
+            .arg("--disable-search-engine-choice-screen")
+            // Anti-bot: hide automation flags that search engines check
+            .arg("--disable-blink-features=AutomationControlled")
+            .arg("--lang=en-US");
 
         if !headless {
             builder = builder.with_head();
+        } else {
+            // Headless mode: override User-Agent to hide "HeadlessChrome" —
+            // a massive bot detection signal. Use a real Chrome UA instead.
+            builder = builder.arg("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
         }
 
         if let Some(ref path) = chrome_path {
