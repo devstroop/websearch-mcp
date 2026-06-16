@@ -1,22 +1,104 @@
-# WebSearch-MCP 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://img.shields.io/badge/🌐_WebSearch--MCP-2D3748?style=for-the-badge&logo=rust&logoColor=white">
+    <img alt="WebSearch-MCP" src="https://img.shields.io/badge/🌐_WebSearch--MCP-2D3748?style=for-the-badge&logo=rust&logoColor=white">
+  </picture>
+</p>
 
-> MCP server for web search via headless Chromium
+<p align="center">
+  <em>Real browser. Real JavaScript. Real search results — served as clean Markdown for AI assistants.</em>
+</p>
 
-## Overview
+<p align="center">
+  <a href="#"><img src="https://img.shields.io/badge/rust-1.80+-de5842?style=flat&logo=rust&logoColor=white" alt="Rust"></a>
+  <a href="#"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat" alt="License"></a>
+  <a href="#"><img src="https://img.shields.io/badge/platform-macOS%20|%20Linux-lightgrey?style=flat" alt="Platform"></a>
+  <a href="#"><img src="https://img.shields.io/badge/MCP-server-7C3AED?style=flat&logo=modelcontextprotocol&logoColor=white" alt="MCP Server"></a>
+  <a href="#"><img src="https://img.shields.io/badge/providers-Brave%20|%20DuckDuckGo%20|%20Google-059669?style=flat" alt="Providers"></a>
+</p>
 
-`websearch-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that provides web search capabilities to AI assistants. Instead of making basic HTTP requests or parsing RSS feeds, it controls a real Chrome/Chromium browser instance — navigating to search engines, waiting for JavaScript to render, extracting the resulting HTML, and converting it to clean Markdown. This approach means the LLM receives the search results page *as rendered*, including content that only appears after JS execution.
+---
 
-The server ships with three search engine providers: **Brave**, **DuckDuckGo**, and **Google**. The caller selects the provider by name in each MCP tool call. Brave is the default and recommended provider — it shows minimal advertising, works without a cookie wall, and its results page converts well to Markdown.
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [How It Works](#-how-it-works)
+- [Prerequisites](#-prerequisites)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Usage — CLI Arguments](#-usage--cli-arguments)
+- [Usage — MCP Integration](#-usage--mcp-integration)
+- [Search Providers](#-search-providers)
+- [Architecture](#-architecture)
+- [Development](#-development)
+- [Troubleshooting](#-troubleshooting)
+- [Environment Variables Reference](#-environment-variables-reference)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🌟 Overview
+
+`websearch-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that provides real web search capabilities to AI assistants. Instead of making basic HTTP requests or parsing RSS feeds, it controls a **real Chrome/Chromium browser instance** — navigating to search engines, waiting for JavaScript to render, extracting the resulting HTML, and converting it to clean Markdown. This approach means the LLM receives the search results page *as rendered*, including content that only appears after JS execution.
+
+The server ships with **three search engine providers**: **Brave**, **DuckDuckGo**, and **Google**. The caller selects the provider by name in each MCP tool call.
+
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## ✨ Features
+
+- **🧠 LLM-native output** — Returns clean Markdown instead of raw HTML or structured JSON. The AI parses results naturally, no fragile CSS selectors or scraping contracts.
+- **🌍 Real browser rendering** — JavaScript-heavy pages that basic HTTP fetchers cannot handle work out of the box via headless Chromium.
+- **🔌 Multi-provider search** — Brave (default, recommended), DuckDuckGo, and Google. Selectable per-request.
+- **📄 Universal fetch** — Fetch and render any URL as clean Markdown, stripping nav bars, headers, footers, and ads automatically.
+- **⚡ Persistent browser** — One Chrome instance lives for the server lifetime. Each request opens a new tab, renders, extracts, and closes it — no browser launch overhead.
+- **🛡️ Graceful shutdown** — Automatic cleanup of Chrome processes and stale `SingletonLock` / `SingletonSocket` files on exit.
+
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 🔄 How It Works
+
+```
+MCP host (LLM)
+    │  tool call: search(query, provider)    or    fetch(url)
+    ▼
+websearch-mcp server
+    │
+    ├─ Resolve provider (Brave / DuckDuckGo / Google)
+    ├─ Open new browser tab → navigate to URL
+    ├─ Wait for JavaScript render (configurable)
+    ├─ Extract page HTML
+    ├─ Strip noise: <script>, <style>, <nav>, <footer>, <iframe>, ads
+    ├─ Convert HTML → Markdown
+    └─ Post-process: remove remaining UI chrome
+         │
+         ▼
+    Return: clean Markdown string → LLM understands it naturally
+```
 
 **Key differentiator:** By using a real browser, `websearch-mcp` handles JavaScript-heavy pages that basic HTTP fetchers cannot. And by returning Markdown instead of structured JSON or raw HTML, it lets the LLM parse results *naturally* — no fragile CSS selectors, no scraping contracts, just clean text the model already understands.
 
-## Prerequisites
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## ✅ Prerequisites
 
 - **Rust 1.80+** — required for `std::sync::LazyLock`
 - **Chrome or Chromium** installed on the system (autodetected on macOS and Linux)
 - **macOS or Linux** — the server uses `pkill`/`pgrep` for browser process management
 
-## Installation
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 📦 Installation
 
 ```bash
 git clone <repo>
@@ -26,9 +108,15 @@ cargo build --release
 
 The compiled binary is at `./target/release/websearch`.
 
-## Usage — CLI Arguments
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
 
-| Arg | Env Var | Default | Description |
+---
+
+## ⚙️ Configuration
+
+All settings can be provided via **CLI flags**, **environment variables**, or both. CLI flags take precedence.
+
+| Flag | Env Var | Default | Description |
 |---|---|---|---|
 | `--profile <PATH>` | `WEBSEARCH_PROFILE` | `$DATA_DIR/websearch-mcp/chrome-profile` | Chrome user data directory |
 | `--headless` | `WEBSEARCH_HEADLESS` | `false` | Run without visible browser window |
@@ -36,7 +124,30 @@ The compiled binary is at `./target/release/websearch`.
 | `--port <PORT>` | — | random free port | Chrome DevTools debugging port |
 | `--wait-seconds <N>` | `WEBSEARCH_WAIT` | `4` | Seconds to wait for page render |
 
-## Usage — MCP Integration
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 🚀 Usage — CLI Arguments
+
+Run the server directly for testing:
+
+```bash
+# Default mode (visible browser window)
+cargo run -- --wait-seconds 5
+
+# Headless mode (no visible window)
+cargo run -- --headless --wait-seconds 5
+
+# Debug logging
+RUST_LOG=debug cargo run -- --headless --wait-seconds 5
+```
+
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 🔌 Usage — MCP Integration
 
 The server communicates over **stdio** (stdin/stdout). Configure it in your MCP host's settings file.
 
@@ -53,7 +164,7 @@ The server communicates over **stdio** (stdin/stdout). Configure it in your MCP 
 }
 ```
 
-### VS Code (Cline / Continue / similar MCP extensions)
+### VS Code / Cline / Continue (`.vscode/mcp.json`)
 
 ```json
 {
@@ -67,22 +178,24 @@ The server communicates over **stdio** (stdin/stdout). Configure it in your MCP 
 }
 ```
 
-The server exposes two tools: `search` and `fetch`:
+### Available Tools
 
-- **`search`** — Search the web via a pluggable search engine
-  - `query` (string, required) — the search query
-  - `provider` (string, optional, default `"brave"`) — one of `brave`, `duckduckgo`, `google`
-  - Returns: the rendered search results page as Markdown
+The server exposes two MCP tools:
 
-- **`fetch`** — Fetch any URL and return rendered content as Markdown
-  - `url` (string, required) — the URL to fetch (only `http://` and `https://` schemes)
-  - Returns: the rendered page content as clean Markdown, with non-content elements (nav, headers, footers, ads) stripped automatically
+| Tool | Parameters | Returns |
+|---|---|---|
+| **`search`** | `query` (string, required), `provider` (string, optional, default `"brave"`) | Rendered search results page as Markdown |
+| **`fetch`** | `url` (string, required, `http://` or `https://` only) | Clean page content as Markdown, with nav/headers/footers/ads stripped |
 
-## Search Providers
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 🔍 Search Providers
 
 | Provider | URL | Notes |
 |---|---|---|
-| **Brave** (default) | `https://search.brave.com/search` | Minimal ads, no cookie wall, clean Markdown output |
+| **Brave** 🏆 (default) | `https://search.brave.com/search` | Minimal ads, no cookie wall, clean Markdown output |
 | **DuckDuckGo** | `https://html.duckduckgo.com/html/` | Lightweight HTML-only page, fast to render |
 | **Google** | `https://www.google.com/search` | Heaviest page, may trigger bot detection or consent walls |
 
@@ -97,7 +210,11 @@ Select a provider by passing its name in the MCP tool call:
 
 The provider name is matched case-insensitively and supports prefix matching (e.g. `"g"` resolves to `"google"`).
 
-## Architecture
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 🏗️ Architecture
 
 ```
 src/
@@ -112,38 +229,17 @@ src/
     └── google.rs        Google search implementation
 ```
 
-### Key design decisions
+### Key Design Decisions
 
 - **Persistent browser.** One Chrome instance is launched at server startup and lives for the entire server lifetime. Each search opens a new tab, navigates, waits for the render to settle, extracts HTML, and closes the tab. This avoids the overhead of launching a browser per request.
 - **No CSS selectors.** After navigation, the full page HTML is extracted, stripped of noise elements (`<script>`, `<style>`, `<nav>`, `<footer>`, `<iframe>`, tracking anchors, etc.), converted to Markdown via `html-to-markdown-rs`, and then post-processed to remove UI chrome and ad labels. The final Markdown is returned as-is — the LLM parses it naturally.
 - **Graceful shutdown.** A `BrowserGuard` (Drop impl) sends SIGTERM, waits 2 seconds, then sends SIGKILL to the Chrome process when the server stops. Stale `SingletonLock` / `SingletonSocket` / `SingletonCookie` files are cleaned on both startup and shutdown.
 
-### Data flow
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
 
-```
-MCP host (LLM)
-    │  tool call: search(query, provider)    or    fetch(url)
-    ▼
-main.rs :: WebSearchServer::search()  /  fetch()
-    │
-    ├─ [search only] registry.rs :: resolve(provider) → &dyn SearchProvider
-    └─ browser.rs :: handle() → Arc<Mutex<Browser>>
-            │
-            ▼
-providers/mod.rs :: navigate_and_get_markdown(browser, url)
-    │
-    ├─ Open new tab, navigate to search URL
-    ├─ Wait for JS render (--wait-seconds)
-    ├─ Extract page HTML
-    ├─ cleanup.rs :: strip_noise(html)     — remove <script>, <nav>, ads, etc.
-    ├─ html-to-markdown-rs :: convert()    — HTML → Markdown
-    └─ cleanup.rs :: clean_markdown(md)    — strip remaining UI chrome
-         │
-         ▼
-    Return: clean Markdown string
-```
+---
 
-## Development
+## 🛠️ Development
 
 ```bash
 # Build
@@ -161,7 +257,18 @@ RUST_LOG=websearch=debug cargo run -- --headless --wait-seconds 5
 
 Logs are written to stderr so they do not interfere with the MCP stdio transport.
 
-## Troubleshooting
+### Release Build
+
+```bash
+cargo build --release
+# Binary: ./target/release/websearch
+```
+
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 🔧 Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
@@ -171,7 +278,11 @@ Logs are written to stderr so they do not interfere with the MCP stdio transport
 | Navigation timeout | Page is slow to render or blocked | Increase `--wait-seconds` (e.g. `--wait-seconds 10`) |
 | Browser not found after server restart | Chrome process from a previous run still alive | Kill it manually: `pkill -f "Google Chrome.*websearch-mcp"` |
 
-## Environment Variables Reference
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 📚 Environment Variables Reference
 
 | Variable | Corresponding Flag |
 |---|---|
@@ -180,6 +291,28 @@ Logs are written to stderr so they do not interfere with the MCP stdio transport
 | `WEBSEARCH_CHROME` | `--chrome` |
 | `WEBSEARCH_WAIT` | `--wait-seconds` |
 
-## License
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
 
-MIT
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how you can help:
+
+1. **Fork** the repository
+2. **Create a feature branch**: `git checkout -b feature/my-feature`
+3. **Commit your changes**: `git commit -am 'Add my feature'`
+4. **Push**: `git push origin feature/my-feature`
+5. **Open a Pull Request**
+
+Please make sure your code passes `cargo build` and `cargo test` before submitting.
+
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
+
+---
+
+## 📄 License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+<p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
