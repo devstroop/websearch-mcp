@@ -1,4 +1,6 @@
-# WebSearch-MCP — MCP server for web search via headless Chromium
+# WebSearch-MCP 
+
+> MCP server for web search via headless Chromium
 
 ## Overview
 
