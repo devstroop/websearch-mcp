@@ -21,15 +21,13 @@ static RE_SCRIPT: LazyLock<regex::Regex> = LazyLock::new(|| {
 static RE_STYLE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?is)<style[^>]*>.*?</style>").expect("Invalid RE_STYLE regex")
 });
-static RE_SVG: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?is)<svg[^>]*>.*?</svg>").expect("Invalid RE_SVG regex")
-});
+static RE_SVG: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?is)<svg[^>]*>.*?</svg>").expect("Invalid RE_SVG regex"));
 static RE_NOSCRIPT: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?is)<noscript[^>]*>.*?</noscript>").expect("Invalid RE_NOSCRIPT regex")
 });
-static RE_NAV: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"(?is)<nav[^>]*>.*?</nav>").expect("Invalid RE_NAV regex")
-});
+static RE_NAV: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?is)<nav[^>]*>.*?</nav>").expect("Invalid RE_NAV regex"));
 static RE_HEADER: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?is)<header[^>]*>.*?</header>").expect("Invalid RE_HEADER regex")
 });
@@ -73,18 +71,16 @@ static RE_FAVICON: LazyLock<regex::Regex> = LazyLock::new(|| {
 static RE_IFRAME: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?is)<iframe[^>]*>.*?</iframe>").expect("Invalid RE_IFRAME regex")
 });
-static RE_IMG: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r#"(?is)<img[^>]*>"#).expect("Invalid RE_IMG regex")
-});
+static RE_IMG: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"(?is)<img[^>]*>"#).expect("Invalid RE_IMG regex"));
 static RE_BASE64: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r#"data:image/[^;]+;base64[^"'\s)]+"#).expect("Invalid RE_BASE64 regex")
 });
 static RE_LONG_STYLE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r#"(?i)style="[^"]{80,}""#).expect("Invalid RE_LONG_STYLE regex")
 });
-static RE_NEWLINES: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"\n{3,}").expect("Invalid RE_NEWLINES regex")
-});
+static RE_NEWLINES: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"\n{3,}").expect("Invalid RE_NEWLINES regex"));
 static RE_DDG_ICON: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"^!\[\]\(.*external-content.*duckduckgo\.com.*\)$")
         .expect("Invalid RE_DDG_ICON regex")
@@ -214,9 +210,7 @@ pub fn clean_markdown(md: &str) -> String {
             return false;
         }
         // Remove tracking/ad URLs
-        if trimmed.contains("duckduckgo.com/y.js")
-            || trimmed.contains("bing.com/aclick")
-        {
+        if trimmed.contains("duckduckgo.com/y.js") || trimmed.contains("bing.com/aclick") {
             return false;
         }
         // Remove lines matching known junk text

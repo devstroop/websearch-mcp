@@ -16,7 +16,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use chromiumoxide::{browser::{Browser, BrowserConfig}, handler::viewport::Viewport};
+use chromiumoxide::{
+    browser::{Browser, BrowserConfig},
+    handler::viewport::Viewport,
+};
 use futures::StreamExt;
 use tokio::sync::Mutex;
 use tracing::info;
@@ -100,9 +103,11 @@ impl BrowserManager {
 
         info!("browser profile: {}", profile_dir.display());
 
-        let mut viewport = Viewport::default();
-        viewport.width = 1080;
-        viewport.height = 768;
+        let viewport = Viewport {
+            width: 1080,
+            height: 768,
+            ..Default::default()
+        };
 
         let mut builder = BrowserConfig::builder()
             .user_data_dir(&profile_dir)
@@ -171,7 +176,10 @@ struct BrowserGuard {
 
 impl BrowserGuard {
     fn new(profile_dir: PathBuf, child_pid: Option<u32>) -> Self {
-        Self { profile_dir, child_pid }
+        Self {
+            profile_dir,
+            child_pid,
+        }
     }
 }
 

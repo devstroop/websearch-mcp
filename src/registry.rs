@@ -10,12 +10,9 @@
 // resolution to it. Providers themselves live in providers/ and implement
 // the SearchProvider trait.
 // ---------------------------------------------------------------------------
-
 use std::collections::HashMap;
 
-use crate::providers::{
-    brave::Brave, duckduckgo::DuckDuckGo, google::Google, SearchProvider,
-};
+use crate::providers::{brave::Brave, duckduckgo::DuckDuckGo, google::Google, SearchProvider};
 
 pub struct SearchEngine {
     providers: HashMap<&'static str, Box<dyn SearchProvider>>,

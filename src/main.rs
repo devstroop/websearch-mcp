@@ -19,8 +19,7 @@ use std::sync::Arc;
 
 use clap::Parser;
 use rmcp::{
-    handler::server::wrapper::Parameters,
-    schemars, serve_server, tool, tool_router,
+    handler::server::wrapper::Parameters, schemars, serve_server, tool, tool_router,
     transport::stdio,
 };
 use serde::Deserialize;
@@ -96,6 +95,13 @@ struct SearchParams {
     provider: String,
 }
 
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+struct FetchParams {
+    /// The URL to fetch and convert to clean Markdown.
+    /// Only http:// and https:// schemes are supported.
+    url: String,
+}
+
 fn default_provider() -> String {
     "brave".into()
 }
@@ -130,9 +136,7 @@ impl WebSearchServer {
             Some(p) => p,
             None => {
                 let available = self.engine.available_providers().join(", ");
-                return format!(
-                    "Unknown provider \"{provider}\". Available: {available}"
-                );
+                return format!("Unknown provider \"{provider}\". Available: {available}");
             }
         };
 
@@ -157,6 +161,35 @@ impl WebSearchServer {
             Err(e) => format!("Search on {} failed: {e}", prov.provider_kind()),
         }
     }
+
+    /// Fetch a URL and return its rendered content as clean Markdown.
+    /// Uses the same browser-driven pipeline as search — loads the page,
+    /// waits for JavaScript to render, strips non-content elements, and
+    /// converts to Markdown for the AI to interpret naturally.
+    #[tool(description = "Fetch a URL and return its rendered content as clean \
+                       Markdown. The page is loaded in a real browser, \
+                       JavaScript is executed, and non-content elements \
+                       (nav, headers, footers, ads, tracking) are stripped \
+                       automatically. Only http:// and https:// URLs are \
+                       supported.")]
+    async fn fetch(&self, Parameters(FetchParams { url }): Parameters<FetchParams>) -> String {
+        let normalized = url.trim();
+        if !normalized.starts_with("http://") && !normalized.starts_with("https://") {
+            return "Invalid URL scheme. Only http:// and https:// are supported.".to_string();
+        }
+
+        let browser = self.browser_mgr.handle().lock().await;
+        match providers::navigate_and_get_markdown(&browser, normalized).await {
+            Ok(markdown) => {
+                if markdown.trim().is_empty() {
+                    format!("The page at {normalized} returned no parseable content.")
+                } else {
+                    format!("--- Content from {normalized} ---\n\n{markdown}")
+                }
+            }
+            Err(e) => format!("Failed to fetch {normalized}: {e}"),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -179,15 +212,8 @@ async fn main() -> anyhow::Result<()> {
         "starting browser (headless={}, wait={}s)",
         args.headless, args.wait_seconds
     );
-    let browser_mgr = Arc::new(
-        BrowserManager::launch(
-            args.headless,
-            profile_dir,
-            args.chrome,
-            args.port,
-        )
-        .await?,
-    );
+    let browser_mgr =
+        Arc::new(BrowserManager::launch(args.headless, profile_dir, args.chrome, args.port).await?);
 
     // Build provider registry.
     let engine = Arc::new(SearchEngine::new());

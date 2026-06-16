@@ -27,10 +27,7 @@ fn get_page_wait() -> Duration {
 ///
 /// Instead of fragile CSS selectors, the LLM client receives the page content
 /// as Markdown and extracts what it needs — the LLM is the only parser needed.
-pub async fn navigate_and_get_markdown(
-    browser: &Browser,
-    url: &str,
-) -> anyhow::Result<String> {
+pub async fn navigate_and_get_markdown(browser: &Browser, url: &str) -> anyhow::Result<String> {
     let page = browser
         .new_page("about:blank")
         .await
@@ -89,9 +86,5 @@ pub trait SearchProvider: Send + Sync {
 
     /// Execute a search via the shared browser. Returns the search results page
     /// as clean Markdown text for the LLM to interpret.
-    async fn search(
-        &self,
-        browser: &Browser,
-        query: &str,
-    ) -> anyhow::Result<String>;
+    async fn search(&self, browser: &Browser, query: &str) -> anyhow::Result<String>;
 }

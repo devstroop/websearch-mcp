@@ -67,13 +67,16 @@ The server communicates over **stdio** (stdin/stdout). Configure it in your MCP 
 }
 ```
 
-The server exposes a single tool called `search`:
+The server exposes two tools: `search` and `fetch`:
 
-- **Tool name:** `search`
-- **Parameters:**
+- **`search`** — Search the web via a pluggable search engine
   - `query` (string, required) — the search query
   - `provider` (string, optional, default `"brave"`) — one of `brave`, `duckduckgo`, `google`
-- **Returns:** the rendered search results page as Markdown text
+  - Returns: the rendered search results page as Markdown
+
+- **`fetch`** — Fetch any URL and return rendered content as Markdown
+  - `url` (string, required) — the URL to fetch (only `http://` and `https://` schemes)
+  - Returns: the rendered page content as clean Markdown, with non-content elements (nav, headers, footers, ads) stripped automatically
 
 ## Search Providers
 
@@ -119,11 +122,11 @@ src/
 
 ```
 MCP host (LLM)
-    │  tool call: search(query, provider)
+    │  tool call: search(query, provider)    or    fetch(url)
     ▼
-main.rs :: WebSearchServer::search()
+main.rs :: WebSearchServer::search()  /  fetch()
     │
-    ├─ registry.rs :: resolve(provider) → &dyn SearchProvider
+    ├─ [search only] registry.rs :: resolve(provider) → &dyn SearchProvider
     └─ browser.rs :: handle() → Arc<Mutex<Browser>>
             │
             ▼

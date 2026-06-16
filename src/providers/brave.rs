@@ -11,16 +11,9 @@ impl SearchProvider for Brave {
         "brave"
     }
 
-    async fn search(
-        &self,
-        browser: &Browser,
-        query: &str,
-    ) -> anyhow::Result<String> {
-        let url = url::Url::parse_with_params(
-            "https://search.brave.com/search",
-            &[("q", query)],
-        )
-        .context("failed to build brave URL")?;
+    async fn search(&self, browser: &Browser, query: &str) -> anyhow::Result<String> {
+        let url = url::Url::parse_with_params("https://search.brave.com/search", &[("q", query)])
+            .context("failed to build brave URL")?;
         navigate_and_get_markdown(browser, url.as_str()).await
     }
 }
