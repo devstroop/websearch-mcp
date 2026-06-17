@@ -1,16 +1,13 @@
 // ---------------------------------------------------------------------------
-// cleanup.rs — HTML pre-clean and Markdown post-clean for search results
-//
-// Responsibilities:
-//   - strip_noise(): strip known noise elements from raw HTML *before*
-//     the Markdown converter runs (nav, header, footer, ads, tracking, etc.)
-//   - clean_markdown(): strip UI chrome, ad labels, and tracking remnants
-//     that survive the HTML→Markdown conversion
-//
-// Both functions are called by providers/mod.rs::navigate_and_get_markdown().
+// cleanup/html.rs — Strip noise elements from raw HTML *before* Markdown
+// conversion. Removes structural elements (head, nav, header, footer, form,
+// script, style, svg, iframe, img), tracking/ad anchors, and long inline
+// style attributes that would produce noisy Markdown output.
 // ---------------------------------------------------------------------------
 
 use std::sync::LazyLock;
+
+use super::RE_NEWLINES;
 
 static RE_HEAD: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r"(?is)<head[^>]*>.*?</head>").expect("Invalid RE_HEAD regex")
@@ -79,12 +76,6 @@ static RE_BASE64: LazyLock<regex::Regex> = LazyLock::new(|| {
 static RE_LONG_STYLE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(r#"(?i)style="[^"]{80,}""#).expect("Invalid RE_LONG_STYLE regex")
 });
-static RE_NEWLINES: LazyLock<regex::Regex> =
-    LazyLock::new(|| regex::Regex::new(r"\n{3,}").expect("Invalid RE_NEWLINES regex"));
-static RE_DDG_ICON: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r"^!\[\]\(.*external-content.*duckduckgo\.com.*\)$")
-        .expect("Invalid RE_DDG_ICON regex")
-});
 
 /// Remove known noise elements from HTML so the Markdown conversion is clean.
 pub fn strip_noise(html: &str) -> String {
@@ -145,91 +136,92 @@ pub fn strip_noise(html: &str) -> String {
     s.to_string()
 }
 
-/// Post-process Markdown output to strip remaining UI chrome, ads, and
-/// tracking junk that survives HTML→Markdown conversion.
-pub fn clean_markdown(md: &str) -> String {
-    let mut lines: Vec<&str> = md.lines().collect();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // Patterns that identify junk lines to remove.
-    let junk_patterns: &[&str] = &[
-        // Google: navigation tabs and filter chrome
-        "Skip to main content",
-        "Accessibility help",
-        "Quick Settings",
-        "AI Mode",
-        "Sign in",
-        "Past hour",
-        "Past 24 hours",
-        "Past week",
-        "Past month",
-        "Past year",
-        "Custom range",
-        "Customised date range",
-        "All results",
-        "Verbatim",
-        "Advanced Search",
-        "Ctrl+Shift+X",
-        "Refine results",
-        "Product rating",
-        "See more",
-        // Brave: AI answer chrome
-        "AI-generated answer",
-        "Please verify critical facts",
-        "Elaborate",
-        "Copy",
-        "Share",
-        "View all",
-        "People also ask",
-        "Learn more",
-        // DuckDuckGo: ad indicators
-        "Ad Viewing ads is privacy protected",
-        "Viewing ads is privacy protected",
-        "Ad clicks are managed by Microsoft",
-        "truncated",
-        // Generic junk
-        "About ", // "About 36,90,00,000 results"
-        "profile picture",
-        "Profile Picture",
-        "Privacy",
-        "Terms",
-        "Feedback",
-    ];
-
-    // Remove lines that contain junk patterns or are empty image references.
-    lines.retain(|line| {
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            return true; // Keep empty lines for spacing
-        }
-        // Remove pure image references like `![]([image])`
-        if trimmed.starts_with("![](") || trimmed == "![]([image])" {
-            return false;
-        }
-        // Remove lines with only an icon/favicon image
-        if RE_DDG_ICON.is_match(trimmed) {
-            return false;
-        }
-        // Remove tracking/ad URLs
-        if trimmed.contains("duckduckgo.com/y.js") || trimmed.contains("bing.com/aclick") {
-            return false;
-        }
-        // Remove lines matching known junk text
-        !junk_patterns.iter().any(|pat| trimmed.contains(pat))
-    });
-
-    // Clean up: strip leading empty lines, trailing empty lines, and
-    // collapse runs of >2 consecutive empty lines.
-    let mut result = lines.join("\n");
-    // Remove leading blank lines
-    while result.starts_with('\n') {
-        result.remove(0);
+    #[test]
+    fn test_strip_script() {
+        let html = "<html><script>alert('xss')</script><body>hello</body></html>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<script"), "should remove script tags");
+        assert!(result.contains("hello"), "should keep content");
     }
-    // Remove trailing blank lines
-    while result.ends_with('\n') {
-        result.pop();
-    }
-    // Collapse 3+ consecutive newlines to 2
-    let result = RE_NEWLINES.replace_all(&result, "\n\n");
 
-    result.to_string()
+    #[test]
+    fn test_strip_style() {
+        let html = "<html><style>body { color: red; }</style><body>text</body></html>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<style"), "should remove style tags");
+        assert!(result.contains("text"), "should keep content");
+    }
+
+    #[test]
+    fn test_strip_nav() {
+        let html = "<nav><a href=\"/\">Home</a></nav><p>content</p>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<nav"), "should remove nav tags");
+        assert!(result.contains("content"), "should keep content");
+    }
+
+    #[test]
+    fn test_strip_header() {
+        let html = "<header><h1>Title</h1></header><p>body</p>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<header"), "should remove header tags");
+        assert!(result.contains("body"), "should keep content");
+    }
+
+    #[test]
+    fn test_strip_footer() {
+        let html = "<footer>© 2024</footer><p>main</p>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<footer"), "should remove footer tags");
+        assert!(result.contains("main"), "should keep content");
+    }
+
+    #[test]
+    fn test_strip_iframe() {
+        let html = "<iframe src=\"ad.html\"></iframe><p>real</p>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<iframe"), "should remove iframe");
+        assert!(result.contains("real"), "should keep content");
+    }
+
+    #[test]
+    fn test_strip_img() {
+        let html = "<img src=\"photo.jpg\" alt=\"pic\"><p>text</p>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<img"), "should remove img tags");
+        assert!(result.contains("text"), "should keep content");
+    }
+
+    #[test]
+    fn test_strip_svg() {
+        let html = "<svg><circle r=\"10\"/></svg><p>content</p>";
+        let result = strip_noise(html);
+        assert!(!result.contains("<svg"), "should remove svg tags");
+        assert!(result.contains("content"), "should keep content");
+    }
+
+    #[test]
+    fn test_collapse_newlines() {
+        let html = "<p>a</p>\n\n\n\n<p>b</p>";
+        let result = strip_noise(html);
+        assert!(result.contains("a"));
+        assert!(result.contains("b"));
+        // Should have at most 2 consecutive newlines
+        assert!(
+            !result.contains("\n\n\n"),
+            "should not have 3+ consecutive newlines"
+        );
+    }
+
+    #[test]
+    fn test_preserves_text_content() {
+        let html = "<div><p>Hello world</p><span>more</span></div>";
+        let result = strip_noise(html);
+        assert!(result.contains("Hello world"));
+        assert!(result.contains("more"));
+    }
 }

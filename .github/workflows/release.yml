@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_RELEASE_LTO: fat
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build — matrix across OS and architecture
+  # ---------------------------------------------------------------------------
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64 (native)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_suffix: linux-x86_64
+            cross: false
+
+          # Linux aarch64 (cross-compiled)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_suffix: linux-aarch64
+            cross: true
+            deps: gcc-aarch64-linux-gnu
+
+          # macOS x86_64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            artifact_suffix: macos-x86_64
+            cross: false
+
+          # macOS arm64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_suffix: macos-aarch64
+            cross: false
+
+          # Windows x86_64 (native)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_suffix: windows-x86_64
+            cross: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation dependencies (Linux ARM64)
+        if: matrix.deps
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.deps }}
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          BINARY="target/${{ matrix.target }}/release/websearch"
+          STAGING="websearch-${{ matrix.artifact_suffix }}"
+          mkdir -p "$STAGING"
+          cp "$BINARY" "$STAGING/" 2>/dev/null || cp "$BINARY.exe" "$STAGING/" 2>/dev/null
+          cp README.md GETTING_STARTED.md LICENSE "$STAGING/" 2>/dev/null || true
+          echo "staged=$STAGING" >> "$GITHUB_OUTPUT"
+        id: artifact
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.artifact.outputs.staged }}
+          path: ${{ steps.artifact.outputs.staged }}
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Create GitHub Release — run once after all builds succeed
+  # ---------------------------------------------------------------------------
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release archives
+        shell: bash
+        run: |
+          cd artifacts
+          for dir in */; do
+            name="${dir%/}"
+            echo "Packaging $name …"
+            cd "$name"
+            if [[ "$name" == *windows* ]]; then
+              zip -r "../$name.zip" .
+            else
+              tar czf "../$name.tar.gz" .
+            fi
+            cd ..
+          done
+
+      - name: Generate release notes
+        shell: bash
+        run: |
+          {
+            echo "## Changelog"
+            echo ""
+            git log --oneline --no-decorate "$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD" \
+              | sed 's/^/- /'
+          } > release-notes.md
+
+      - name: Upload to GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: artifacts/*.tar.gz,artifacts/*.zip
+          bodyFile: release-notes.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: false
