@@ -61,7 +61,13 @@ jobs:
 
       - name: Install cross-compilation dependencies (Linux ARM64)
         if: matrix.deps
-        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.deps }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y ${{ matrix.deps }}
+          mkdir -p .cargo
+          cat > .cargo/config.toml << 'EOF'
+          [target.aarch64-unknown-linux-gnu]
+          linker = "aarch64-linux-gnu-gcc"
+          EOF
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
