@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
 // tools/search.rs — Search tool handler
 //
-// Delegated from tools/mod.rs's `#[tool]` method. Kept separate so the
-// logic is testable and the tool routing file stays focused on wiring.
+// Delegated from tools/mod.rs's `#[tool]` method. Uses the SessionManager
+// to open a tab, navigate to the search URL, extract content, and clean up.
 // ---------------------------------------------------------------------------
 
 use super::WebSearchServer;
@@ -17,8 +17,19 @@ pub async fn handle(server: &WebSearchServer, query: String, provider: String) -
         }
     };
 
-    let browser = server.browser_mgr.handle().lock().await;
-    match prov.search(&browser, &query, server.wait_seconds).await {
+    let url = prov.search_url(&query);
+    let mut session = server.session.lock().await;
+
+    // Open a temporary tab for the search, get content, then close it.
+    let tab_result = session.open_tab(Some(&url), true).await;
+    if let Err(e) = tab_result {
+        return format!("Failed to open search tab: {e}");
+    }
+
+    let content = session.get_content().await;
+    let _ = session.close_tab(None).await;
+
+    match content {
         Ok(markdown) => {
             if markdown.trim().is_empty() {
                 format!(

@@ -1,7 +1,4 @@
-use anyhow::Context;
-use chromiumoxide::browser::Browser;
-
-use super::{navigate_and_get_markdown, SearchProvider};
+use super::SearchProvider;
 
 pub struct Google;
 
@@ -11,14 +8,9 @@ impl SearchProvider for Google {
         "google"
     }
 
-    async fn search(
-        &self,
-        browser: &Browser,
-        query: &str,
-        wait_seconds: u64,
-    ) -> anyhow::Result<String> {
-        let url = url::Url::parse_with_params("https://www.google.com/search", &[("q", query)])
-            .context("failed to build google URL")?;
-        navigate_and_get_markdown(browser, url.as_str(), wait_seconds).await
+    fn search_url(&self, query: &str) -> String {
+        url::Url::parse_with_params("https://www.google.com/search", &[("q", query)])
+            .map(|u| u.to_string())
+            .unwrap_or_else(|_| format!("https://www.google.com/search?q={query}"))
     }
 }

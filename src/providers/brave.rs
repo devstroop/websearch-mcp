@@ -1,7 +1,4 @@
-use anyhow::Context;
-use chromiumoxide::browser::Browser;
-
-use super::{navigate_and_get_markdown, SearchProvider};
+use super::SearchProvider;
 
 pub struct Brave;
 
@@ -11,14 +8,9 @@ impl SearchProvider for Brave {
         "brave"
     }
 
-    async fn search(
-        &self,
-        browser: &Browser,
-        query: &str,
-        wait_seconds: u64,
-    ) -> anyhow::Result<String> {
-        let url = url::Url::parse_with_params("https://search.brave.com/search", &[("q", query)])
-            .context("failed to build brave URL")?;
-        navigate_and_get_markdown(browser, url.as_str(), wait_seconds).await
+    fn search_url(&self, query: &str) -> String {
+        url::Url::parse_with_params("https://search.brave.com/search", &[("q", query)])
+            .map(|u| u.to_string())
+            .unwrap_or_else(|_| format!("https://search.brave.com/search?q={query}"))
     }
 }
