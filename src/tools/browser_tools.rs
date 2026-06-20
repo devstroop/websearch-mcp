@@ -141,7 +141,10 @@ pub async fn type_text(
     submit: Option<bool>,
 ) -> String {
     let mut session = server.session.lock().await;
-    match session.type_text(&selector, &text, submit.unwrap_or(false)).await {
+    match session
+        .type_text(&selector, &text, submit.unwrap_or(false))
+        .await
+    {
         Ok(()) => {
             if submit.unwrap_or(false) {
                 format!("Typed and submitted: {text} → {selector}")

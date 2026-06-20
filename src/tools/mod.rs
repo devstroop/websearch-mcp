@@ -172,9 +172,11 @@ impl WebSearchServer {
 
     // ----- Browser tab management -----
 
-    #[tool(description = "Open a new browser tab, optionally navigating to a URL. \
+    #[tool(
+        description = "Open a new browser tab, optionally navigating to a URL. \
                        Returns the tab ID and info. The new tab becomes active \
-                       by default.")]
+                       by default."
+    )]
     async fn browser_open(
         &self,
         Parameters(BrowserOpenParams { url, activate }): Parameters<BrowserOpenParams>,

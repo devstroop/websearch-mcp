@@ -71,10 +71,7 @@ pub struct SessionManager {
 
 impl SessionManager {
     /// Create a new session manager, recovering existing tabs if possible.
-    pub async fn new(
-        browser: Arc<Mutex<Browser>>,
-        wait_seconds: u64,
-    ) -> LibResult<Self> {
+    pub async fn new(browser: Arc<Mutex<Browser>>, wait_seconds: u64) -> LibResult<Self> {
         let mut session = Self {
             browser,
             tabs: HashMap::new(),
@@ -278,12 +275,7 @@ impl SessionManager {
     }
 
     /// Type text into an element by CSS selector, optionally pressing Enter.
-    pub async fn type_text(
-        &mut self,
-        selector: &str,
-        text: &str,
-        submit: bool,
-    ) -> LibResult<()> {
+    pub async fn type_text(&mut self, selector: &str, text: &str, submit: bool) -> LibResult<()> {
         let page = self.get_active_page()?;
         let element = page
             .find_element(selector)
@@ -430,11 +422,7 @@ impl SessionManager {
 
             info!("recovered tab {target_id} → {url}");
 
-            let tab = ManagedTab {
-                page,
-                url,
-                title,
-            };
+            let tab = ManagedTab { page, url, title };
             self.tabs.insert(target_id.clone(), tab);
 
             if self.active_tab_id.is_none() {

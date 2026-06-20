@@ -179,10 +179,7 @@ impl BrowserManager {
     /// The session manager tracks tabs, manages navigation, and provides
     /// high-level interaction methods. It will attempt to recover any
     /// existing browser tabs from the persistent session.
-    pub async fn session(
-        &self,
-        wait_seconds: u64,
-    ) -> LibResult<Arc<Mutex<SessionManager>>> {
+    pub async fn session(&self, wait_seconds: u64) -> LibResult<Arc<Mutex<SessionManager>>> {
         let session = SessionManager::new(self.browser.clone(), wait_seconds).await?;
         Ok(Arc::new(Mutex::new(session)))
     }
