@@ -92,6 +92,8 @@ pub struct BrowserManager {
     browser: SharedBrowser,
     /// Guard is None when connected to a remote browser (we don't own it).
     _guard: Option<BrowserGuard>,
+    /// Whether the browser was launched in headless mode.
+    headless: bool,
 }
 
 impl BrowserManager {
@@ -167,6 +169,7 @@ impl BrowserManager {
         Ok(Self {
             browser: Arc::new(Mutex::new(browser)),
             _guard: Some(BrowserGuard::new(profile_dir, pid)),
+            headless,
         })
     }
 
@@ -196,6 +199,7 @@ impl BrowserManager {
         Ok(Self {
             browser: Arc::new(Mutex::new(browser)),
             _guard: None, // Don't kill the remote browser on drop.
+            headless: false, // Remote browsers are assumed non-headless.
         })
     }
 
@@ -211,7 +215,8 @@ impl BrowserManager {
     /// high-level interaction methods. It will attempt to recover any
     /// existing browser tabs from the persistent session.
     pub async fn session(&self, wait_seconds: u64) -> LibResult<Arc<Mutex<SessionManager>>> {
-        let session = SessionManager::new(self.browser.clone(), wait_seconds).await?;
+        let session =
+            SessionManager::new(self.browser.clone(), wait_seconds, self.headless).await?;
         Ok(Arc::new(Mutex::new(session)))
     }
 }

@@ -137,16 +137,19 @@ pub struct SessionManager {
     active_tab_id: Option<String>,
     /// Seconds to wait for JS rendering.
     wait_seconds: u64,
+    /// Whether stealth patches should be applied (headless mode only).
+    headless: bool,
 }
 
 impl SessionManager {
     /// Create a new session manager, recovering existing tabs if possible.
-    pub async fn new(browser: Arc<Mutex<Browser>>, wait_seconds: u64) -> LibResult<Self> {
+    pub async fn new(browser: Arc<Mutex<Browser>>, wait_seconds: u64, headless: bool) -> LibResult<Self> {
         let mut session = Self {
             browser,
             tabs: HashMap::new(),
             active_tab_id: None,
             wait_seconds,
+            headless,
         };
 
         // Try to recover existing browser tabs from the persistent session.
@@ -177,8 +180,10 @@ impl SessionManager {
                 .map_err(|e| Error::Browser(format!("failed to open new tab: {e}")))?
         };
 
-        // Apply anti-detection stealth patches before any page loads.
-        let _ = page.evaluate_on_new_document(STEALTH_JS).await;
+        // Apply anti-detection stealth patches before any page loads (headless only).
+        if self.headless {
+            let _ = page.evaluate_on_new_document(STEALTH_JS).await;
+        }
 
         let target_id = page.target_id().as_ref().to_string();
         let current_url = url.unwrap_or("about:blank").to_string();
@@ -266,8 +271,10 @@ impl SessionManager {
             .map_err(|_| Error::NavigationTimeout(self.wait_seconds))?
             .map_err(|e| Error::Navigation(e.to_string()))?;
 
-        // Re-apply stealth after navigation (some sites check post-load).
-        let _ = page.evaluate(STEALTH_JS).await;
+        // Re-apply stealth after navigation in headless mode (some sites check post-load).
+        if self.headless {
+            let _ = page.evaluate(STEALTH_JS).await;
+        }
 
         // Allow JS to render and network to settle.
         tokio::time::sleep(wait).await;
