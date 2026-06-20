@@ -42,6 +42,11 @@ pub struct Args {
     #[arg(long)]
     pub port: Option<u16>,
 
+    /// Connect to an existing Chrome instance via DevTools WebSocket URL
+    /// (e.g. ws://localhost:9222). When set, skips local browser launch.
+    #[arg(long, env = "WEBSEARCH_REMOTE_URL")]
+    pub remote_url: Option<String>,
+
     /// How many seconds to wait for pages to render before extracting HTML.
     #[arg(long, default_value = "4", env = "WEBSEARCH_WAIT")]
     pub wait_seconds: u64,
@@ -80,6 +85,10 @@ pub struct Config {
     /// Optional debug port for DevTools.
     pub port: Option<u16>,
 
+    /// Optional remote Chrome DevTools WebSocket URL.
+    /// When set, connects to an existing browser instead of launching one.
+    pub remote_url: Option<String>,
+
     /// Seconds to wait for page rendering (1–120).
     pub wait_seconds: u64,
 }
@@ -109,6 +118,7 @@ impl Config {
             headless: args.headless,
             chrome: args.chrome,
             port: args.port,
+            remote_url: args.remote_url,
             wait_seconds: args.wait_seconds,
         })
     }
@@ -125,6 +135,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 4,
         };
         let config = Config::from_args(args).unwrap();
@@ -139,6 +150,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 0,
         };
         let err = Config::from_args(args).unwrap_err();
@@ -154,6 +166,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 121,
         };
         let err = Config::from_args(args).unwrap_err();
@@ -167,6 +180,7 @@ mod tests {
             headless: true,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 5,
         };
         let config = Config::from_args(args).unwrap();
@@ -180,6 +194,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 4,
         };
         let config = Config::from_args(args).unwrap();
@@ -197,6 +212,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 4,
         };
         let config = Config::from_args(args).unwrap();
@@ -211,6 +227,7 @@ mod tests {
             headless: false,
             chrome: Some(chrome.clone()),
             port: None,
+            remote_url: None,
             wait_seconds: 4,
         };
         let config = Config::from_args(args).unwrap();
@@ -224,6 +241,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: Some(9222),
+            remote_url: None,
             wait_seconds: 4,
         };
         let config = Config::from_args(args).unwrap();
@@ -237,6 +255,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 1,
         };
         let config = Config::from_args(args).unwrap();
@@ -250,6 +269,7 @@ mod tests {
             headless: false,
             chrome: None,
             port: None,
+            remote_url: None,
             wait_seconds: 120,
         };
         let config = Config::from_args(args).unwrap();

@@ -14,6 +14,7 @@ fn test_registry_resolves_all_providers() {
         headless: false,
         chrome: None,
         port: None,
+        remote_url: None,
         wait_seconds: 4,
     };
     let config = Config::from_args(args).unwrap();

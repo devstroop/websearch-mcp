@@ -90,7 +90,8 @@ fn find_chrome_pid(profile_dir: &Path) -> Option<u32> {
 
 pub struct BrowserManager {
     browser: SharedBrowser,
-    _guard: BrowserGuard,
+    /// Guard is None when connected to a remote browser (we don't own it).
+    _guard: Option<BrowserGuard>,
 }
 
 impl BrowserManager {
@@ -165,7 +166,36 @@ impl BrowserManager {
 
         Ok(Self {
             browser: Arc::new(Mutex::new(browser)),
-            _guard: BrowserGuard::new(profile_dir, pid),
+            _guard: Some(BrowserGuard::new(profile_dir, pid)),
+        })
+    }
+
+    /// Connect to an existing Chrome instance via DevTools WebSocket URL.
+    ///
+    /// `url` should be a WebSocket URL like `ws://localhost:9222`.
+    /// No browser process is launched or killed — the caller owns the remote browser.
+    pub async fn connect(url: &str) -> Result<Self> {
+        info!("connecting to remote Chrome: {url}");
+
+        let (browser, mut handler) = Browser::connect(url)
+            .await
+            .context("failed to connect to remote Chrome")?;
+
+        // Drive CDP messages in background so the connection stays alive.
+        tokio::spawn(async move {
+            while let Some(event) = handler.next().await {
+                if let Err(e) = &event {
+                    warn!("browser handler error: {e}");
+                }
+            }
+            info!("browser handler ended — CDP connection closed");
+        });
+
+        info!("connected to remote Chrome");
+
+        Ok(Self {
+            browser: Arc::new(Mutex::new(browser)),
+            _guard: None, // Don't kill the remote browser on drop.
         })
     }
 

@@ -56,22 +56,33 @@ use tools::WebSearchServer;
 /// at the binary boundary via the `std::error::Error` trait impl.
 pub async fn serve(config: Config) -> error::Result<()> {
     let profile_dir = &config.profile_dir;
-    std::fs::create_dir_all(profile_dir)?;
 
-    info!(
-        "starting browser (headless={}, wait={}s)",
-        config.headless, config.wait_seconds
-    );
-    let browser_mgr = Arc::new(
-        browser::BrowserManager::launch(
-            config.headless,
-            profile_dir.clone(),
-            config.chrome,
-            config.port,
+    let browser_mgr = if let Some(ref url) = config.remote_url {
+        // Connect to existing remote Chrome instance.
+        info!("connecting to remote browser at {url}");
+        Arc::new(
+            browser::BrowserManager::connect(url)
+                .await
+                .map_err(|e| Error::BrowserLaunch(e.to_string()))?,
         )
-        .await
-        .map_err(|e| Error::BrowserLaunch(e.to_string()))?,
-    );
+    } else {
+        // Launch a local Chrome instance.
+        std::fs::create_dir_all(profile_dir)?;
+        info!(
+            "starting browser (headless={}, wait={}s)",
+            config.headless, config.wait_seconds
+        );
+        Arc::new(
+            browser::BrowserManager::launch(
+                config.headless,
+                profile_dir.clone(),
+                config.chrome,
+                config.port,
+            )
+            .await
+            .map_err(|e| Error::BrowserLaunch(e.to_string()))?,
+        )
+    };
 
     // Create the session manager, recovering any existing tabs.
     let session = browser_mgr.session(config.wait_seconds).await?;

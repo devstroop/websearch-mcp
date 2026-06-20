@@ -12,6 +12,7 @@ fn test_valid_config_from_args() {
         headless: false,
         chrome: None,
         port: None,
+        remote_url: None,
         wait_seconds: 4,
     };
     let config = Config::from_args(args).unwrap();
@@ -27,6 +28,7 @@ fn test_zero_wait_seconds_rejected() {
         headless: false,
         chrome: None,
         port: None,
+        remote_url: None,
         wait_seconds: 0,
     };
     let err = Config::from_args(args).unwrap_err();
@@ -43,6 +45,7 @@ fn test_excessive_wait_seconds_rejected() {
         headless: false,
         chrome: None,
         port: None,
+        remote_url: None,
         wait_seconds: 999,
     };
     let err = Config::from_args(args).unwrap_err();
