@@ -128,20 +128,6 @@ impl SessionManager {
             self.active_tab_id = Some(target_id.clone());
         }
 
-        // Wait briefly for initial page load.
-        if url.is_some() {
-            tokio::time::sleep(Duration::from_secs(self.wait_seconds)).await;
-            // Update title after load.
-            if let Some(tab) = self.tabs.get_mut(&target_id) {
-                tab.title = tab
-                    .page
-                    .get_title()
-                    .await
-                    .unwrap_or(None)
-                    .unwrap_or_default();
-            }
-        }
-
         info!("opened tab {} → {}", &target_id[..8], current_url);
         Ok(self.get_tab_info(&target_id))
     }
@@ -340,9 +326,14 @@ impl SessionManager {
 
     /// Get the active tab's content as clean Markdown.
     ///
-    /// Runs the full cleanup pipeline: HTML noise stripping → Markdown
-    /// conversion → Markdown post-processing.
+    /// Waits for the page to finish rendering (CSS, JS), then runs the full
+    /// cleanup pipeline: HTML noise stripping → Markdown conversion →
+    /// Markdown post-processing.
     pub async fn get_content(&mut self) -> LibResult<String> {
+        // Wait for page to finish rendering before extraction.
+        let wait = Duration::from_secs(self.wait_seconds);
+        tokio::time::sleep(wait).await;
+
         let html = self.get_html().await?;
         let md = html_to_markdown(&html)?;
         Ok(md)

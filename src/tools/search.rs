@@ -8,6 +8,10 @@
 use super::WebSearchServer;
 
 /// Execute a search and return the rendered results as Markdown.
+///
+/// Opens a temporary tab for the search, waits for rendering, and returns
+/// the content. The tab is NOT auto-closed — the agent controls tab lifecycle
+/// via browser_close.
 pub async fn handle(server: &WebSearchServer, query: String, provider: String) -> String {
     let prov = match server.engine.resolve(&provider) {
         Some(p) => p,
@@ -20,14 +24,14 @@ pub async fn handle(server: &WebSearchServer, query: String, provider: String) -
     let url = prov.search_url(&query);
     let mut session = server.session.lock().await;
 
-    // Open a temporary tab for the search, get content, then close it.
+    // Open a tab for the search.
     let tab_result = session.open_tab(Some(&url), true).await;
     if let Err(e) = tab_result {
         return format!("Failed to open search tab: {e}");
     }
 
+    // get_content() waits for rendering then extracts.
     let content = session.get_content().await;
-    let _ = session.close_tab(None).await;
 
     match content {
         Ok(markdown) => {
@@ -35,14 +39,15 @@ pub async fn handle(server: &WebSearchServer, query: String, provider: String) -
                 format!(
                     "{} returned empty results for \"{query}\". \
                      The page may be blocking automated access. \
-                     Try a different provider.",
+                     Try a different provider. Use browser_close to close this tab.",
                     prov.provider_kind()
                 )
             } else {
                 format!(
-                    "--- Results from {} ---\n\n{}",
+                    "--- Results from {} ---\n\n{}\n\n[Tab `{}` still open — use browser_close when done]",
                     prov.provider_kind(),
-                    markdown
+                    markdown,
+                    session.active_tab_id().unwrap_or("?")
                 )
             }
         }
