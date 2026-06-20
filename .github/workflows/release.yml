@@ -33,12 +33,6 @@ jobs:
             cross: true
             deps: gcc-aarch64-linux-gnu
 
-          # macOS x86_64
-          - os: macos-13
-            target: x86_64-apple-darwin
-            artifact_suffix: macos-x86_64
-            cross: false
-
           # macOS arm64
           - os: macos-latest
             target: aarch64-apple-darwin
