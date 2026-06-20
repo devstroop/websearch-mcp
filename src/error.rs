@@ -38,6 +38,18 @@ pub enum Error {
     #[error("invalid URL scheme: {0}")]
     InvalidUrlScheme(String),
 
+    /// No active tab or tab operation failed.
+    #[error("tab error: {0}")]
+    Tab(String),
+
+    /// Element not found by CSS selector.
+    #[error("element not found: {0}")]
+    ElementNotFound(String),
+
+    /// Screenshot capture or encoding failed.
+    #[error("screenshot failed: {0}")]
+    Screenshot(String),
+
     /// Configuration validation error.
     #[error("configuration error: {0}")]
     Config(String),

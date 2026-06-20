@@ -1,12 +1,11 @@
 // ---------------------------------------------------------------------------
 // tools/fetch.rs — Fetch tool handler
 //
-// Delegated from tools/mod.rs's `#[tool]` method. Kept separate so the
-// logic is testable and the tool routing file stays focused on wiring.
+// Delegated from tools/mod.rs's `#[tool]` method. Uses the SessionManager
+// to open a tab, navigate to the URL, extract content, and clean up.
 // ---------------------------------------------------------------------------
 
 use super::WebSearchServer;
-use crate::providers;
 
 /// Fetch a URL and return its rendered content as clean Markdown.
 pub async fn handle(server: &WebSearchServer, url: String) -> String {
@@ -15,8 +14,18 @@ pub async fn handle(server: &WebSearchServer, url: String) -> String {
         return "Invalid URL scheme. Only http:// and https:// are supported.".to_string();
     }
 
-    let browser = server.browser_mgr.handle().lock().await;
-    match providers::navigate_and_get_markdown(&browser, normalized, server.wait_seconds).await {
+    let mut session = server.session.lock().await;
+
+    // Open a temporary tab for the fetch, get content, then close it.
+    let tab_result = session.open_tab(Some(normalized), true).await;
+    if let Err(e) = tab_result {
+        return format!("Failed to open fetch tab: {e}");
+    }
+
+    let content = session.get_content().await;
+    let _ = session.close_tab(None).await;
+
+    match content {
         Ok(markdown) => {
             if markdown.trim().is_empty() {
                 format!("The page at {normalized} returned no parseable content.")

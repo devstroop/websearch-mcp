@@ -10,8 +10,9 @@
 //
 // Internal modules:
 //   - browser    — Browser lifecycle (launch, hold, kill)
+//   - session    — Tab management, navigation, interaction, content extraction
 //   - cleanup    — HTML noise stripping + Markdown post-processing
-//   - providers/ — Search implementations (brave, google, duckduckgo)
+//   - providers/ — Search URL builders (brave, google, duckduckgo)
 //   - registry   — Provider registry (register, resolve, list)
 //   - tools/     — MCP server struct and tool handlers
 // ---------------------------------------------------------------------------
@@ -24,6 +25,7 @@ mod browser;
 mod cleanup;
 mod providers;
 mod registry;
+mod session;
 mod tools;
 
 use std::sync::Arc;
@@ -45,9 +47,10 @@ use tools::WebSearchServer;
 /// This function:
 /// 1. Creates the profile directory if needed
 /// 2. Launches a persistent Chromium browser
-/// 3. Registers all search providers
-/// 4. Starts the MCP transport over stdio
-/// 5. Waits for the server to finish (SIGTERM, EOF, etc.)
+/// 3. Creates a SessionManager (recovers existing tabs)
+/// 4. Registers all search providers
+/// 5. Starts the MCP transport over stdio
+/// 6. Waits for the server to finish (SIGTERM, EOF, etc.)
 ///
 /// Returns `Error` on failure, which automatically converts to `anyhow::Error`
 /// at the binary boundary via the `std::error::Error` trait impl.
@@ -70,14 +73,13 @@ pub async fn serve(config: Config) -> error::Result<()> {
         .map_err(|e| Error::BrowserLaunch(e.to_string()))?,
     );
 
+    // Create the session manager, recovering any existing tabs.
+    let session = browser_mgr.session(config.wait_seconds).await?;
+
     let engine = Arc::new(registry::SearchEngine::new());
     info!("providers ready: {:?}", engine.available_providers());
 
-    let server = WebSearchServer {
-        engine,
-        browser_mgr,
-        wait_seconds: config.wait_seconds,
-    };
+    let server = WebSearchServer { engine, session };
 
     info!("websearch-mcp starting on stdio …");
     serve_server(server, stdio())

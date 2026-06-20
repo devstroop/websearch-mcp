@@ -1,7 +1,4 @@
-use anyhow::Context;
-use chromiumoxide::browser::Browser;
-
-use super::{navigate_and_get_markdown, SearchProvider};
+use super::SearchProvider;
 
 pub struct DuckDuckGo;
 
@@ -11,14 +8,9 @@ impl SearchProvider for DuckDuckGo {
         "duckduckgo"
     }
 
-    async fn search(
-        &self,
-        browser: &Browser,
-        query: &str,
-        wait_seconds: u64,
-    ) -> anyhow::Result<String> {
-        let url = url::Url::parse_with_params("https://html.duckduckgo.com/html/", &[("q", query)])
-            .context("failed to build duckduckgo URL")?;
-        navigate_and_get_markdown(browser, url.as_str(), wait_seconds).await
+    fn search_url(&self, query: &str) -> String {
+        url::Url::parse_with_params("https://html.duckduckgo.com/html/", &[("q", query)])
+            .map(|u| u.to_string())
+            .unwrap_or_else(|_| format!("https://html.duckduckgo.com/html/?q={query}"))
     }
 }
