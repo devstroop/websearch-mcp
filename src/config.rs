@@ -44,7 +44,7 @@ pub struct Args {
 
     /// Connect to an existing Chrome instance via DevTools WebSocket URL
     /// (e.g. ws://localhost:9222). When set, skips local browser launch.
-    #[arg(long, env = "WEBSEARCH_REMOTE_URL")]
+    #[arg(long, env = "REMOTE_URL")]
     pub remote_url: Option<String>,
 
     /// How many seconds to wait for pages to render before extracting HTML.
