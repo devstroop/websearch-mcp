@@ -24,6 +24,7 @@ use crate::cleanup;
 ///
 /// Instead of fragile CSS selectors, the LLM client receives the page content
 /// as Markdown and extracts what it needs — the LLM is the only parser needed.
+#[allow(dead_code)]
 pub async fn navigate_and_get_markdown(
     browser: &Browser,
     url: &str,

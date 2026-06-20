@@ -170,6 +170,7 @@ impl BrowserManager {
     }
 
     /// Get a reference to the shared browser handle.
+    #[allow(dead_code)]
     pub fn handle(&self) -> &SharedBrowser {
         &self.browser
     }
