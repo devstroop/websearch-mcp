@@ -2,16 +2,17 @@
 // tools/search.rs — Search tool handler
 //
 // Delegated from tools/mod.rs's `#[tool]` method. Uses the SessionManager
-// to open a tab, navigate to the search URL, extract content, and clean up.
+// to reuse the persistent search tab, navigate to the search URL, extract
+// content, and return structured results.
 // ---------------------------------------------------------------------------
 
 use super::WebSearchServer;
 
-/// Execute a search and return the rendered results as Markdown.
+/// Execute a search using the persistent search tab.
 ///
-/// Opens a temporary tab for the search, waits for rendering, and returns
-/// the content. The tab is NOT auto-closed — the agent controls tab lifecycle
-/// via browser_close.
+/// The search tab is created on first call and reused for subsequent searches.
+/// The active tab is NOT changed — the agent can continue working on other tabs
+/// while the search tab is navigated in the background.
 pub async fn handle(server: &WebSearchServer, query: String, provider: String) -> String {
     let prov = match server.engine.resolve(&provider) {
         Some(p) => p,
@@ -24,30 +25,19 @@ pub async fn handle(server: &WebSearchServer, query: String, provider: String) -
     let url = prov.search_url(&query);
     let mut session = server.session.lock().await;
 
-    // Open a tab for the search.
-    let tab_result = session.open_tab(Some(&url), true).await;
-    if let Err(e) = tab_result {
-        return format!("Failed to open search tab: {e}");
-    }
-
-    // get_content() waits for rendering then extracts.
-    let content = session.get_content().await;
-
-    match content {
-        Ok(markdown) => {
-            if markdown.trim().is_empty() {
+    match session.search_or_reuse(prov.provider_kind(), &query, &url).await {
+        Ok(result) => {
+            if result.raw_markdown.trim().is_empty() {
                 format!(
                     "{} returned empty results for \"{query}\". \
                      The page may be blocking automated access. \
-                     Try a different provider. Use browser_close to close this tab.",
-                    prov.provider_kind()
+                     Try a different provider.",
+                    result.provider
                 )
             } else {
                 format!(
-                    "--- Results from {} ---\n\n{}\n\n[Tab `{}` still open — use browser_close when done]",
-                    prov.provider_kind(),
-                    markdown,
-                    session.active_tab_id().unwrap_or("?")
+                    "--- Results from {} ---\n\n{}\n\n[Search tab `{}` reused — stays open for next search]",
+                    result.provider, result.raw_markdown, result.tab_id
                 )
             }
         }
