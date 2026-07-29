@@ -224,12 +224,15 @@ impl SessionManager {
         if elements.is_empty() {
             return Ok(format!(
                 "No elements found matching \"{text}\"{}.",
-                role.map(|r| format!(" with role \"{r}\"")).unwrap_or_default()
+                role.map(|r| format!(" with role \"{r}\""))
+                    .unwrap_or_default()
             ));
         }
 
-        let mut output =
-            format!("Found {} element(s) matching \"{text}\":\n\n", elements.len());
+        let mut output = format!(
+            "Found {} element(s) matching \"{text}\":\n\n",
+            elements.len()
+        );
         for (i, el) in elements.iter().enumerate() {
             let role = el["role"].as_str().unwrap_or("");
             let name = el["name"].as_str().unwrap_or("");

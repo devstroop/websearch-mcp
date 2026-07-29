@@ -420,7 +420,9 @@ impl WebSearchServer {
                        `value` attribute of `<option>` elements.")]
     async fn browser_select_option(
         &self,
-        Parameters(BrowserSelectOptionParams { selector, value }): Parameters<BrowserSelectOptionParams>,
+        Parameters(BrowserSelectOptionParams { selector, value }): Parameters<
+            BrowserSelectOptionParams,
+        >,
     ) -> String {
         browser_tools::select_option_element(self, selector, value).await
     }
@@ -434,7 +436,10 @@ impl WebSearchServer {
     ) -> String {
         let form_fields: Vec<session::FormField> = fields
             .into_iter()
-            .map(|f| session::FormField { selector: f.selector, value: f.value })
+            .map(|f| session::FormField {
+                selector: f.selector,
+                value: f.value,
+            })
             .collect();
         browser_tools::fill_form_fields(self, form_fields).await
     }
@@ -464,7 +469,10 @@ impl WebSearchServer {
                        to the file on the local filesystem.")]
     async fn browser_file_upload(
         &self,
-        Parameters(BrowserFileUploadParams { selector, file_path }): Parameters<BrowserFileUploadParams>,
+        Parameters(BrowserFileUploadParams {
+            selector,
+            file_path,
+        }): Parameters<BrowserFileUploadParams>,
     ) -> String {
         browser_tools::upload_file(self, selector, file_path).await
     }
@@ -495,7 +503,10 @@ impl WebSearchServer {
                        exists in DOM).")]
     async fn browser_wait_for(
         &self,
-        Parameters(BrowserWaitForParams { condition, timeout_ms }): Parameters<BrowserWaitForParams>,
+        Parameters(BrowserWaitForParams {
+            condition,
+            timeout_ms,
+        }): Parameters<BrowserWaitForParams>,
     ) -> String {
         browser_tools::wait_for_condition_met(self, condition, timeout_ms).await
     }
@@ -537,7 +548,10 @@ impl WebSearchServer {
                        prompt_text with the response value.")]
     async fn browser_handle_dialog(
         &self,
-        Parameters(BrowserHandleDialogParams { action, prompt_text }): Parameters<BrowserHandleDialogParams>,
+        Parameters(BrowserHandleDialogParams {
+            action,
+            prompt_text,
+        }): Parameters<BrowserHandleDialogParams>,
     ) -> String {
         browser_tools::handle_dialog_action(self, action, prompt_text).await
     }
@@ -549,7 +563,11 @@ impl WebSearchServer {
                        (not visible or detached).")]
     async fn browser_wait_for_selector(
         &self,
-        Parameters(BrowserWaitForSelectorParams { selector, state, timeout_ms }): Parameters<BrowserWaitForSelectorParams>,
+        Parameters(BrowserWaitForSelectorParams {
+            selector,
+            state,
+            timeout_ms,
+        }): Parameters<BrowserWaitForSelectorParams>,
     ) -> String {
         browser_tools::wait_for_selector_state(self, selector, state, timeout_ms).await
     }

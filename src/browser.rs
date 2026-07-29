@@ -198,7 +198,7 @@ impl BrowserManager {
 
         Ok(Self {
             browser: Arc::new(Mutex::new(browser)),
-            _guard: None, // Don't kill the remote browser on drop.
+            _guard: None,    // Don't kill the remote browser on drop.
             headless: false, // Remote browsers are assumed non-headless.
         })
     }

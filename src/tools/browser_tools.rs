@@ -169,7 +169,11 @@ pub async fn hover_element(server: &WebSearchServer, selector: String) -> String
 }
 
 /// Select an option in a `<select>` dropdown by CSS selector.
-pub async fn select_option_element(server: &WebSearchServer, selector: String, value: String) -> String {
+pub async fn select_option_element(
+    server: &WebSearchServer,
+    selector: String,
+    value: String,
+) -> String {
     let mut session = server.session.lock().await;
     match session.select_option(&selector, &value).await {
         Ok(()) => format!("Selected '{value}' in {selector}"),
@@ -268,7 +272,10 @@ pub async fn wait_for_selector_state(
 ) -> String {
     let mut session = server.session.lock().await;
     let state_ref = state.as_deref().unwrap_or("visible");
-    match session.wait_for_selector(&selector, Some(state_ref), timeout_ms).await {
+    match session
+        .wait_for_selector(&selector, Some(state_ref), timeout_ms)
+        .await
+    {
         Ok(()) => format!("Selector condition met: {selector} (state={state_ref})"),
         Err(e) => format!("Wait for selector failed: {e}"),
     }

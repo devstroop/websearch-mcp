@@ -76,9 +76,7 @@ impl SessionManager {
             let page = &self
                 .tabs
                 .get(&tab_id)
-                .ok_or_else(|| {
-                    Error::Tab("search tab vanished during content extraction".into())
-                })?
+                .ok_or_else(|| Error::Tab("search tab vanished during content extraction".into()))?
                 .page;
 
             let html = page

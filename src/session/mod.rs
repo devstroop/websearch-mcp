@@ -120,9 +120,10 @@ impl SessionManager {
         let id = self.active_tab_id.as_ref().ok_or_else(|| {
             Error::Tab("no active tab — use browser_open to create a tab first".into())
         })?;
-        let tab = self.tabs.get(id).ok_or_else(|| {
-            Error::Tab(format!("active tab {id} not found in session"))
-        })?;
+        let tab = self
+            .tabs
+            .get(id)
+            .ok_or_else(|| Error::Tab(format!("active tab {id} not found in session")))?;
         Ok(&tab.page)
     }
 

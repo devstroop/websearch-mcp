@@ -121,12 +121,9 @@ impl SessionManager {
                 .find_element(&field.selector)
                 .await
                 .map_err(|e| Error::ElementNotFound(format!("{}: {e}", field.selector)))?;
-            element
-                .click()
-                .await
-                .map_err(|e| {
-                    Error::Browser(format!("focus click failed on {}: {e}", field.selector))
-                })?;
+            element.click().await.map_err(|e| {
+                Error::Browser(format!("focus click failed on {}: {e}", field.selector))
+            })?;
             element
                 .type_str(&field.value)
                 .await
@@ -145,12 +142,11 @@ impl SessionManager {
             .find_element(from_selector)
             .await
             .map_err(|e| Error::ElementNotFound(format!("{from_selector}: {e}")))?;
-        let center = element
-            .clickable_point()
-            .await
-            .map_err(|e| {
-                Error::Browser(format!("failed to get clickable point for {from_selector}: {e}"))
-            })?;
+        let center = element.clickable_point().await.map_err(|e| {
+            Error::Browser(format!(
+                "failed to get clickable point for {from_selector}: {e}"
+            ))
+        })?;
 
         element
             .hover()
@@ -187,12 +183,9 @@ impl SessionManager {
             .find_element(to_selector)
             .await
             .map_err(|e| Error::ElementNotFound(format!("{to_selector}: {e}")))?;
-        let target = element
-            .clickable_point()
-            .await
-            .map_err(|e| {
-                Error::Browser(format!("failed to get target point for {to_selector}: {e}"))
-            })?;
+        let target = element.clickable_point().await.map_err(|e| {
+            Error::Browser(format!("failed to get target point for {to_selector}: {e}"))
+        })?;
 
         let (ox, oy) = origin;
         let steps = 8u32;

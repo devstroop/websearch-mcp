@@ -25,7 +25,10 @@ pub async fn handle(server: &WebSearchServer, query: String, provider: String) -
     let url = prov.search_url(&query);
     let mut session = server.session.lock().await;
 
-    match session.search_or_reuse(prov.provider_kind(), &query, &url).await {
+    match session
+        .search_or_reuse(prov.provider_kind(), &query, &url)
+        .await
+    {
         Ok(result) => {
             if result.raw_markdown.trim().is_empty() {
                 format!(

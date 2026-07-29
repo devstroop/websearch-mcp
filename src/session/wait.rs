@@ -35,7 +35,9 @@ impl SessionManager {
             let sel_json = serde_json::to_string(sel).unwrap();
             format!("document.querySelector({sel_json}) !== null ")
         } else {
-            return Err(Error::Browser(format!("unknown wait condition: {condition}")));
+            return Err(Error::Browser(format!(
+                "unknown wait condition: {condition}"
+            )));
         };
         let js = js.trim_end().to_string();
 

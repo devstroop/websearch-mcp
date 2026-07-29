@@ -17,10 +17,11 @@ impl SessionManager {
     pub async fn dialog_pending(&mut self) -> LibResult<Option<String>> {
         self.touch_active_tab();
         match self.poll_dialog().await? {
-            Some(info) => Ok(Some(
-                serde_json::to_string(info)
-                    .map_err(|e| Error::Other(format!("serialize dialog info: {e}")))?,
-            )),
+            Some(info) => {
+                Ok(Some(serde_json::to_string(info).map_err(|e| {
+                    Error::Other(format!("serialize dialog info: {e}"))
+                })?))
+            }
             None => Ok(None),
         }
     }
@@ -41,7 +42,8 @@ impl SessionManager {
 
             if let Some(listener) = &mut tab.dialog_listener {
                 if let Ok(Some(event)) =
-                    tokio::time::timeout(std::time::Duration::from_millis(50), listener.next()).await
+                    tokio::time::timeout(std::time::Duration::from_millis(50), listener.next())
+                        .await
                 {
                     tab.pending_dialog = Some(DialogInfo {
                         dialog_type: event.r#type.as_ref().to_string(),

@@ -39,10 +39,7 @@ impl SessionManager {
             warn!("failed to enable Page domain for dialog events: {e}");
         }
 
-        let dialog_listener = match page
-            .event_listener::<EventJavascriptDialogOpening>()
-            .await
-        {
+        let dialog_listener = match page.event_listener::<EventJavascriptDialogOpening>().await {
             Ok(listener) => Some(listener),
             Err(e) => {
                 warn!("failed to register dialog event listener: {e}");
@@ -233,9 +230,7 @@ impl SessionManager {
             if let Err(e) = page.execute(page_cdp::EnableParams::default()).await {
                 warn!("failed to enable Page domain on recovered tab: {e}");
             }
-            let dialog_listener = match page
-                .event_listener::<EventJavascriptDialogOpening>()
-                .await
+            let dialog_listener = match page.event_listener::<EventJavascriptDialogOpening>().await
             {
                 Ok(listener) => Some(listener),
                 Err(e) => {
