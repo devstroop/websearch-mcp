@@ -10,6 +10,7 @@
 // ---------------------------------------------------------------------------
 
 use super::WebSearchServer;
+use crate::session::FormField;
 
 // ---------------------------------------------------------------------------
 // Tab lifecycle handlers
@@ -153,6 +154,159 @@ pub async fn type_text(
             }
         }
         Err(e) => format!("Type failed: {e}"),
+    }
+}
+
+// ----- Phase 3 — Behavioral interaction handlers -----
+
+/// Hover over an element on the active tab by CSS selector.
+pub async fn hover_element(server: &WebSearchServer, selector: String) -> String {
+    let mut session = server.session.lock().await;
+    match session.hover(&selector).await {
+        Ok(()) => format!("Hovered over: {selector}"),
+        Err(e) => format!("Hover failed: {e}"),
+    }
+}
+
+/// Select an option in a `<select>` dropdown by CSS selector.
+pub async fn select_option_element(server: &WebSearchServer, selector: String, value: String) -> String {
+    let mut session = server.session.lock().await;
+    match session.select_option(&selector, &value).await {
+        Ok(()) => format!("Selected '{value}' in {selector}"),
+        Err(e) => format!("Select option failed: {e}"),
+    }
+}
+
+/// Fill multiple form fields at once.
+pub async fn fill_form_fields(server: &WebSearchServer, fields: Vec<FormField>) -> String {
+    let mut session = server.session.lock().await;
+    match session.fill_form(&fields).await {
+        Ok(()) => format!("Filled {} form field(s)", fields.len()),
+        Err(e) => format!("Fill form failed: {e}"),
+    }
+}
+
+/// Start dragging an element from its current location.
+pub async fn drag_element(server: &WebSearchServer, from_selector: String) -> String {
+    let mut session = server.session.lock().await;
+    match session.drag_from(&from_selector).await {
+        Ok(()) => format!("Dragging from: {from_selector}"),
+        Err(e) => format!("Drag failed: {e}"),
+    }
+}
+
+/// Drop a previously dragged element onto a target element.
+pub async fn drop_element(server: &WebSearchServer, selector: String) -> String {
+    let mut session = server.session.lock().await;
+    match session.drop_to(&selector).await {
+        Ok(()) => format!("Dropped onto: {selector}"),
+        Err(e) => format!("Drop failed: {e}"),
+    }
+}
+
+/// Upload a file via an `<input type="file">` element.
+pub async fn upload_file(server: &WebSearchServer, selector: String, file_path: String) -> String {
+    let mut session = server.session.lock().await;
+    match session.file_upload(&selector, &file_path).await {
+        Ok(()) => format!("Uploaded {file_path} to {selector}"),
+        Err(e) => format!("File upload failed: {e}"),
+    }
+}
+
+/// Press a keyboard key or key combination on the active tab.
+pub async fn press_key_input(server: &WebSearchServer, key: String) -> String {
+    let mut session = server.session.lock().await;
+    match session.press_key(&key).await {
+        Ok(()) => format!("Pressed: {key}"),
+        Err(e) => format!("Press key failed: {e}"),
+    }
+}
+
+/// Resize the browser viewport.
+pub async fn resize_viewport_size(server: &WebSearchServer, width: u32, height: u32) -> String {
+    let mut session = server.session.lock().await;
+    match session.resize_viewport(width, height).await {
+        Ok(()) => format!("Viewport resized to {width}x{height}"),
+        Err(e) => format!("Resize failed: {e}"),
+    }
+}
+
+/// Wait for a page condition (load, domcontentloaded, networkidle, selector:...).
+pub async fn wait_for_condition_met(
+    server: &WebSearchServer,
+    condition: String,
+    timeout_ms: Option<u64>,
+) -> String {
+    let mut session = server.session.lock().await;
+    match session.wait_for(&condition, timeout_ms).await {
+        Ok(()) => format!("Condition met: {condition}"),
+        Err(e) => format!("Wait for failed: {e}"),
+    }
+}
+
+// ----- Phase 5 — Dialog handling -----
+
+/// Handle a pending browser dialog (alert/confirm/prompt).
+pub async fn handle_dialog_action(
+    server: &WebSearchServer,
+    action: String,
+    prompt_text: Option<String>,
+) -> String {
+    let mut session = server.session.lock().await;
+    match session.handle_dialog(&action, prompt_text.as_deref()).await {
+        Ok(info) => format!("Dialog handled ({action}): {info}"),
+        Err(e) => format!("Handle dialog failed: {e}"),
+    }
+}
+
+/// Wait for an element to reach a specific DOM state.
+pub async fn wait_for_selector_state(
+    server: &WebSearchServer,
+    selector: String,
+    state: Option<String>,
+    timeout_ms: Option<u64>,
+) -> String {
+    let mut session = server.session.lock().await;
+    let state_ref = state.as_deref().unwrap_or("visible");
+    match session.wait_for_selector(&selector, Some(state_ref), timeout_ms).await {
+        Ok(()) => format!("Selector condition met: {selector} (state={state_ref})"),
+        Err(e) => format!("Wait for selector failed: {e}"),
+    }
+}
+
+// ----- Phase 2 — Accessibility snapshot -----
+
+/// Get the accessibility tree of the active tab.
+pub async fn get_snapshot(server: &WebSearchServer, max_nodes: Option<usize>) -> String {
+    let mut session = server.session.lock().await;
+    match session.accessibility_snapshot(max_nodes).await {
+        Ok(tree) => tree,
+        Err(e) => format!("Snapshot failed: {e}"),
+    }
+}
+
+// ----- Phase 4 — Find -----
+
+/// Search the active page for interactive elements matching text/role.
+pub async fn find_elements(server: &WebSearchServer, text: String, role: Option<String>) -> String {
+    let mut session = server.session.lock().await;
+    match session.find_in_page(&text, role.as_deref()).await {
+        Ok(result) => result,
+        Err(e) => format!("Find failed: {e}"),
+    }
+}
+
+// ----- Phase 6 — Tab lifecycle -----
+
+/// Close idle tabs that haven't been interacted with.
+pub async fn close_idle_tabs_action(server: &WebSearchServer, idle_seconds: u64) -> String {
+    let mut session = server.session.lock().await;
+    let timeout = std::time::Duration::from_secs(idle_seconds);
+    let count = session.close_idle_tabs(timeout).await;
+    if count == 0 {
+        format!("No idle tabs to close (timeout: {idle_seconds}s)")
+    } else {
+        format!("Closed {count} idle tab(s) (inactive > {idle_seconds}s)")
     }
 }
 
