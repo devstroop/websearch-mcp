@@ -45,6 +45,7 @@ pub(crate) struct ManagedTab {
 
 /// Structured search result returned to the MCP tool handler.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SearchResult {
     pub provider: String,
     pub query: String,
@@ -54,6 +55,7 @@ pub struct SearchResult {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SearchSnippet {
     pub title: String,
     pub url: String,

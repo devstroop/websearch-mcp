@@ -152,6 +152,7 @@ impl SessionManager {
     }
 
     /// Get the dedicated search tab ID, if any.
+    #[allow(dead_code)]
     pub fn search_tab_id(&self) -> Option<&str> {
         self.search_tab_id.as_deref()
     }
