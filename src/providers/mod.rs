@@ -8,7 +8,6 @@
 pub mod brave;
 pub mod duckduckgo;
 pub mod google;
-pub mod navigate;
 
 /// A provider-agnostic search interface.
 ///
