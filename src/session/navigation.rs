@@ -29,11 +29,17 @@ impl SessionManager {
         // Allow JS to render and network to settle.
         tokio::time::sleep(wait).await;
 
-        // Update tracked URL and title.
+        // Update tracked URL from actual page URL (handles redirects).
+        let actual_url = page
+            .url()
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| url.to_string());
         let id_clone = self.active_tab_id.clone();
         if let Some(id) = &id_clone {
             if let Some(tab) = self.tabs.get_mut(id) {
-                tab.url = url.to_string();
+                tab.url = actual_url;
             }
         }
         // Update title separately to avoid borrow conflict.
