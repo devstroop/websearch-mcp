@@ -28,8 +28,16 @@ async fn main() -> anyhow::Result<()> {
             tracing_subscriber::EnvFilter::builder()
                 .with_default_directive(tracing::Level::WARN.into())
                 .from_env_lossy()
-                .add_directive("websearch=info".parse().expect("invalid filter directive: websearch=info"))
-                .add_directive("chromiumoxide=error".parse().expect("invalid filter directive: chromiumoxide=error")),
+                .add_directive(
+                    "websearch=info"
+                        .parse()
+                        .expect("invalid filter directive: websearch=info"),
+                )
+                .add_directive(
+                    "chromiumoxide=error"
+                        .parse()
+                        .expect("invalid filter directive: chromiumoxide=error"),
+                ),
         )
         .init();
 
