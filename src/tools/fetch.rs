@@ -42,6 +42,12 @@ pub async fn handle(server: &WebSearchServer, url: String) -> String {
                 )
             }
         }
-        Err(e) => format!("Failed to fetch {normalized}: {e}"),
+        Err(e) => {
+            let tab_id = session.active_tab_id().unwrap_or("?").to_string();
+            format!(
+                "Failed to fetch {normalized}: {e}\n\
+                 [Tab `{tab_id}` still open — use browser_close when done]"
+            )
+        }
     }
 }

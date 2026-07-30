@@ -34,8 +34,9 @@ pub async fn handle(server: &WebSearchServer, query: String, provider: String) -
                 format!(
                     "{} returned empty results for \"{query}\". \
                      The page may be blocking automated access. \
-                     Try a different provider.",
-                    result.provider
+                     Try a different provider.\
+                     [Search tab `{}` reused — stays open for next search]",
+                    result.provider, result.tab_id
                 )
             } else {
                 format!(
