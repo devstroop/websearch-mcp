@@ -11,9 +11,8 @@ pub mod google;
 
 /// A provider-agnostic search interface.
 ///
-/// Each implementation knows how to construct a search URL for its engine.
+/// Each implementation knows how to build a search URL for its engine.
 /// The browser navigation is handled by the SessionManager.
-#[async_trait::async_trait]
 pub trait SearchProvider: Send + Sync {
     /// Human-readable provider name (e.g. "duckduckgo", "google").
     fn provider_kind(&self) -> &'static str;

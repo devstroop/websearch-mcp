@@ -2,7 +2,6 @@ use super::SearchProvider;
 
 pub struct Google;
 
-#[async_trait::async_trait]
 impl SearchProvider for Google {
     fn provider_kind(&self) -> &'static str {
         "google"

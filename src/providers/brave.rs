@@ -2,7 +2,6 @@ use super::SearchProvider;
 
 pub struct Brave;
 
-#[async_trait::async_trait]
 impl SearchProvider for Brave {
     fn provider_kind(&self) -> &'static str {
         "brave"
