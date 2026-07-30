@@ -387,6 +387,7 @@ cargo build --release
 | `WEBSEARCH_HEADLESS` | `--headless` |
 | `WEBSEARCH_CHROME` | `--chrome` |
 | `WEBSEARCH_WAIT` | `--wait-seconds` |
+| `WEBSEARCH_REMOTE_URL` | `--remote-url` |
 
 <p align="right"><a href="#-table-of-contents">⬆ back to top</a></p>
 
