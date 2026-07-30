@@ -147,9 +147,7 @@ impl SessionManager {
         let role_filter = match role {
             Some(r) => {
                 let r_esc = serde_json::to_string(r).unwrap();
-                format!(
-                    "|| (role === {r_esc} && tag !== {r_esc}) || (tag === {r_esc} && role !== {r_esc})"
-                )
+                format!("|| (role !== {r_esc} && tag !== {r_esc})")
             }
             None => String::new(),
         };

@@ -38,10 +38,12 @@ Object.defineProperty(navigator, 'plugins', {
 });
 
 // 4. Override Permissions.query for notifications (headless returns "denied")
-const originalQuery = window.Permissions.prototype.query;
-window.Permissions.prototype.query = function(parameters) {
+const originalQuery = navigator.permissions.constructor.prototype.query;
+navigator.permissions.constructor.prototype.query = function(parameters) {
     if (parameters.name === 'notifications') {
-        return Promise.resolve({ state: Notification.permission });
+        // Return 'prompt' instead of real Notification.permission (which
+        // is 'denied' in headless mode) to avoid headless fingerprinting.
+        return Promise.resolve({ state: 'prompt' });
     }
     return originalQuery.call(this, parameters);
 };

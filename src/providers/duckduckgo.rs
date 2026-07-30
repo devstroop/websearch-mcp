@@ -2,7 +2,6 @@ use super::SearchProvider;
 
 pub struct DuckDuckGo;
 
-#[async_trait::async_trait]
 impl SearchProvider for DuckDuckGo {
     fn provider_kind(&self) -> &'static str {
         "duckduckgo"
