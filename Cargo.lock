@@ -2540,6 +2540,7 @@ dependencies = [
  "dirs",
  "futures",
  "html-to-markdown-rs",
+ "libc",
  "regex",
  "rmcp",
  "serde",

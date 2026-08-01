@@ -82,19 +82,18 @@ impl SessionManager {
         let sel = serde_json::to_string(selector).unwrap();
 
         let condition = match state {
-            "attached" => format!("document.querySelector({sel}) !== null "),
-            "detached" => format!("document.querySelector({sel}) === null "),
+            "attached" => format!("(() => document.querySelector({sel}) !== null)()"),
+            "detached" => format!("(() => document.querySelector({sel}) === null)()"),
             "visible" => format!(
-                "const el = document.querySelector({sel}); \
-                 el !== null && el.offsetParent !== null "
+                "(() => {{ const el = document.querySelector({sel}); \
+                 return el !== null && el.offsetParent !== null; }})()"
             ),
             "hidden" => format!(
-                "const el = document.querySelector({sel}); \
-                 el === null || el.offsetParent === null "
+                "(() => {{ const el = document.querySelector({sel}); \
+                 return el === null || el.offsetParent === null; }})()"
             ),
             _ => return Err(Error::Browser(format!("unknown wait state: {state}"))),
         };
-        // Trim trailing space added for Rust 2021 reserved-prefix compat.
         let condition = condition.trim_end().to_string();
 
         let start = std::time::Instant::now();
