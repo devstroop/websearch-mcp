@@ -129,7 +129,9 @@ impl BrowserManager {
             .arg(("lang", "en-US"));
 
         // Running as root (common in containers/CI) requires disabling the
-        // sandbox, which Chrome refuses to start without.
+        // sandbox, which Chrome refuses to start without. Unix-only: there
+        // is no `geteuid` on Windows (and Windows Chrome has no sandbox flag).
+        #[cfg(unix)]
         if unsafe { libc::geteuid() } == 0 {
             builder = builder.arg("no-sandbox");
         }
