@@ -14,7 +14,6 @@ impl SessionManager {
     ///
     /// Polls the CDP `Page.javascriptDialogOpening` event stream and returns
     /// the most recent dialog info as a JSON string, or `None`.
-    #[allow(dead_code)]
     pub async fn dialog_pending(&mut self) -> LibResult<Option<String>> {
         self.touch_active_tab();
         match self.poll_dialog().await? {

@@ -129,7 +129,17 @@ pub async fn reload_page(server: &WebSearchServer) -> String {
 pub async fn click_element(server: &WebSearchServer, selector: String) -> String {
     let mut session = server.session.lock().await;
     match session.click(&selector).await {
-        Ok(()) => format!("Clicked: {selector}"),
+        Ok(()) => {
+            if let Ok(Some(dialog)) = session.dialog_pending().await {
+                format!(
+                    "Clicked: {selector}. WARNING: a JavaScript dialog is now \
+                     pending: {dialog}. Use browser_handle_dialog to accept \
+                     or dismiss it."
+                )
+            } else {
+                format!("Clicked: {selector}")
+            }
+        }
         Err(e) => format!("Click failed: {e}"),
     }
 }

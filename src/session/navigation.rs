@@ -62,7 +62,9 @@ impl SessionManager {
         self.guard_no_dialog().await?;
         self.touch_active_tab();
         let page = self.get_active_page()?;
-        page.goto("javascript:history.back()")
+        // NOTE: `goto("javascript:history.back()")` always errors in modern
+        // Chrome (ERR_ABORTED/timeout), so drive history via evaluate instead.
+        page.evaluate("history.back()")
             .await
             .map_err(|e| Error::Browser(format!("go back failed: {e}")))?;
         tokio::time::sleep(Duration::from_secs(2)).await;
@@ -75,7 +77,8 @@ impl SessionManager {
         self.guard_no_dialog().await?;
         self.touch_active_tab();
         let page = self.get_active_page()?;
-        page.goto("javascript:history.forward()")
+        // Same as back(): javascript: URLs abort in modern Chrome.
+        page.evaluate("history.forward()")
             .await
             .map_err(|e| Error::Browser(format!("go forward failed: {e}")))?;
         tokio::time::sleep(Duration::from_secs(2)).await;

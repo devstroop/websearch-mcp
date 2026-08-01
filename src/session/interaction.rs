@@ -15,6 +15,13 @@ use super::{Error, LibResult, SessionManager};
 
 impl SessionManager {
     /// Click an element by CSS selector on the active tab.
+    ///
+    /// The click is dispatched via raw CDP input events rather than
+    /// chromiumoxide's `element.click()`: if the click opens a JavaScript
+    /// dialog (alert/confirm/prompt), the page main thread pauses and the
+    /// final mouse-release command never completes. Time-boxing the release
+    /// and polling for the dialog keeps this call from hanging — the pending
+    /// dialog is surfaced to the agent so it can call `browser_handle_dialog`.
     pub async fn click(&mut self, selector: &str) -> LibResult<()> {
         self.guard_no_dialog().await?;
         self.touch_active_tab();
@@ -23,10 +30,52 @@ impl SessionManager {
             .find_element(selector)
             .await
             .map_err(|e| Error::ElementNotFound(format!("{selector}: {e}")))?;
+
         element
-            .click()
+            .scroll_into_view()
+            .await
+            .map_err(|e| Error::Browser(format!("scroll into view failed on {selector}: {e}")))?;
+        let center = element
+            .clickable_point()
             .await
             .map_err(|e| Error::Browser(format!("click failed on {selector}: {e}")))?;
+
+        let builder = DispatchMouseEventParams::builder()
+            .x(center.x)
+            .y(center.y)
+            .button(MouseButton::Left)
+            .click_count(1);
+
+        page.execute(
+            builder
+                .clone()
+                .r#type(DispatchMouseEventType::MouseMoved)
+                .build()
+                .unwrap(),
+        )
+        .await
+        .map_err(|e| Error::Browser(format!("CDP mousemove failed on {selector}: {e}")))?;
+
+        page.execute(
+            builder
+                .clone()
+                .r#type(DispatchMouseEventType::MousePressed)
+                .build()
+                .unwrap(),
+        )
+        .await
+        .map_err(|e| Error::Browser(format!("CDP mousedown failed on {selector}: {e}")))?;
+
+        // If the mouseup fires alert()/confirm(), the page pauses and Chrome
+        // never answers the release command. Treat that as success — the
+        // pending dialog is detected below.
+        let release = builder
+            .r#type(DispatchMouseEventType::MouseReleased)
+            .build()
+            .unwrap();
+        let _ =
+            tokio::time::timeout(std::time::Duration::from_secs(2), page.execute(release)).await;
+
         info!("clicked element: {selector}");
         Ok(())
     }
